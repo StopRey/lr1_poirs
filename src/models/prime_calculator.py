@@ -1,48 +1,57 @@
 from sympy import isprime
 from concurrent.futures import ThreadPoolExecutor
-from math import ceil
-from dataclasses import dataclass
-from typing import List, Tuple
 
-@dataclass
-class CalculationResult:
-    count: int
-    pairs: List[Tuple[int, int]]
-    execution_time: float
-    mode: str
+class SingleThreadPrimePairs:
+    def calculate(self, n: int) -> int:
+        count = 0
+        last_prime = None
+        i = 3
+        while i < n:
+            if isprime(i):
+                if last_prime is not None and i - last_prime == 2:
+                    count += 1
+                last_prime = i
+                i += 2
+            else:
+                i += 2 
+        return count
 
-class PrimeCalculator:
-    def __init__(self):
-        self.num_threads = 4
+class MultiThreadPrimePairs:
+    def __init__(self, num_threads: int = 4):
+        self.num_threads = num_threads
 
-    def _find_prime_pairs_in_range(self, start: int, end: int) -> List[Tuple[int, int]]:
-        primes = [i for i in range(start, end, 2) if isprime(i)]
-        prime_pairs = [(primes[i], primes[i + 1]) 
-                      for i in range(len(primes) - 1) 
-                      if primes[i + 1] - primes[i] == 2]
-        return prime_pairs
+    def _count_pairs(self, start: int, end: int, prev_prime: int = None) -> (int, int):
+        count = 0
+        last_prime = prev_prime
+        i = start
+        while i < end:
+            if isprime(i):
+                if last_prime is not None and i - last_prime == 2:
+                    count += 1
+                last_prime = i
+                i += 2
+            else:
+                i += 2
+        return count, last_prime
 
-    def calculate_parallel(self, n: int) -> List[Tuple[int, int]]:
-        chunk_size = ceil((n - 3) / self.num_threads)
+    def calculate(self, n: int) -> int:
+        step = (n - 3) // self.num_threads + 1
         ranges = []
-        
-        start = 3
-        while start < n:
-            end = min(start + chunk_size, n)
+        for i in range(self.num_threads):
+            start = 3 + i * step
+            end = min(3 + (i + 1) * step + 2, n)  # запас, щоб не втратити пари
             if start % 2 == 0:
                 start += 1
             ranges.append((start, end))
-            start += chunk_size
 
+        results = []
+        prev_last_prime = None
         with ThreadPoolExecutor(max_workers=self.num_threads) as executor:
-            results = list(executor.map(
-                lambda r: self._find_prime_pairs_in_range(*r), ranges))
-
-        all_pairs = []
-        for pairs in results:
-            all_pairs.extend(pairs)
-
-        return sorted(list(set(all_pairs)))
-
-    def calculate_single(self, n: int) -> List[Tuple[int, int]]:
-        return self._find_prime_pairs_in_range(3, n) 
+            futures = []
+            for r in ranges:
+                futures.append(executor.submit(self._count_pairs, r[0], r[1], prev_last_prime))
+            prev_last_prime = None
+            for f in futures:
+                res, prev_last_prime = f.result()
+                results.append(res)
+        return sum(results)

@@ -1,13 +1,14 @@
 import time
 from src.controllers.input_controller import InputController
 from src.controllers.file_controller import FileController
-from src.models.prime_calculator import PrimeCalculator
+from src.models.prime_calculator import SingleThreadPrimePairs, MultiThreadPrimePairs
 from src.views.console_view import ConsoleView
 
 class Application:
     def __init__(self):
         self.view = ConsoleView()
-        self.calculator = PrimeCalculator()
+        self.single_calculator = SingleThreadPrimePairs()
+        self.multi_calculator = MultiThreadPrimePairs()
         self.input_controller = InputController()
         self.file_controller = FileController()
 
@@ -49,14 +50,13 @@ class Application:
     def _perform_calculation(self, n, calc_choice):
         start_time = time.time()
         if calc_choice == "1":
-            pairs = self.calculator.calculate_parallel(n)
+            count = self.multi_calculator.calculate(n)
             mode = "багатопотоковий"
         else:
-            pairs = self.calculator.calculate_single(n)
+            count = self.single_calculator.calculate(n)
             mode = "звичайний"
         
         elapsed_time = time.time() - start_time
-        count = len(pairs)
 
         print(f"\nРежим обчислення: {mode}")
         print(f"Кількість послідовних простих пар: {count}")
@@ -65,7 +65,6 @@ class Application:
         return {
             "result": count,
             "time": elapsed_time,
-            "prime_pairs": pairs,
             "mode": mode
         }
 
