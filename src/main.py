@@ -1,7 +1,8 @@
 import time
-from src.controllers.input_controller import InputController
-from src.controllers.file_controller import FileController
-from src.models.prime_calculator import SingleThreadPrimePairs, MultiThreadPrimePairs
+from src.handlers.input_handler import InputController
+from src.handlers.file_handler import FileController
+from src.models.multi_thread_prime_pairs import MultiThreadPrimePairs
+from src.models.single_thread_prime_pairs import SingleThreadPrimePairs
 from src.views.console_view import ConsoleView
 
 class Application:
